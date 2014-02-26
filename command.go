@@ -190,13 +190,13 @@ Usage: {{if .Runnable}}
   {{.UseLine}}{{if .HasFlags}} [flags]{{end}}{{end}}{{if .HasSubCommands}}
   {{ .CommandPath}} [command]{{end}}
 {{ if .HasSubCommands}}
-Available Commands: {{range .Commands}}{{if .Runnable}}
-  {{rpad .Use .UsagePadding }} :: {{.Short}}{{end}}{{end}}
+Available Commands: {{range .Commands}}{{if or .Runnable .HasSubCommands}}
+  {{rpad .Use .UsagePadding }}  {{.Short}}{{end}}{{end}}
 {{end}}
 {{ if .HasFlags}} Available Flags:
 {{.Flags.FlagUsages}}{{end}}{{if .HasParent}}{{if and (gt .Commands 0) (gt .Parent.Commands 1) }}
-Additional help topics: {{if gt .Commands 0 }}{{range .Commands}}{{if not .Runnable}} {{rpad .CommandPath .CommandPathPadding}} :: {{.Short}}{{end}}{{end}}{{end}}{{if gt .Parent.Commands 1 }}{{range .Parent.Commands}}{{if .Runnable}}{{if not (eq .Name $cmd.Name) }}{{end}}
-  {{rpad .CommandPath .CommandPathPadding}} :: {{.Short}}{{end}}{{end}}{{end}}{{end}}
+Additional help topics: {{if gt .Commands 0 }}{{range .Commands}}{{if not .Runnable}} {{rpad .CommandPath .CommandPathPadding}}  {{.Short}}{{end}}{{end}}{{end}}{{if gt .Parent.Commands 1 }}{{range .Parent.Commands}}{{if .Runnable}}{{if not (eq .Name $cmd.Name) }}{{end}}
+  {{rpad .CommandPath .CommandPathPadding}}  {{.Short}}{{end}}{{end}}{{end}}{{end}}
 {{end}}
 Use "{{.Root.Name}} help [command]" for more information about that command.
 `
@@ -212,7 +212,7 @@ func (c *Command) HelpTemplate() string {
 		return c.parent.HelpTemplate()
 	} else {
 		return `{{.Long | trim}}
-{{if .Runnable}}{{.UsageString}}{{end}}
+{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
 `
 	}
 }
@@ -279,6 +279,11 @@ func (c *Command) findAndExecute(args []string) (err error) {
 	cmd, a, e := c.Find(args)
 	if e != nil {
 		return e
+	}
+	if cmd.Runnable() {
+		return cmd.execute(a)
+	} else {
+		return cmd.Usage()
 	}
 	return cmd.execute(a)
 }
